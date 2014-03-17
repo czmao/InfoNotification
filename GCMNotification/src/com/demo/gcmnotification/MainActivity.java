@@ -20,8 +20,6 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
-import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -61,39 +59,16 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		mDisplay = (TextView) findViewById(R.id.display);
 		context = getApplicationContext();
-		//Now we will get instance from GoogleCloudMessaging and assign it to gcm.
-		gcm = GoogleCloudMessaging.getInstance(this);
 		//RegisterBackground, which is our AsyncTask,
 		//helps to connect to google cloud using background thread.
-		if(isPlayServicesAvaliable()){
-			//new RegisterBackground().execute();
-	        regid = getRegistrationId(context);
-
-	        if (regid.isEmpty()) {
-	            Log.e(TAG, "registering in background");
-	            //new RegisterBackground().execute();
-				String msg = "";
-				try {
-					Log.e(TAG, "doInBackground");
-	                if (gcm == null) {
-	                	Log.e(TAG, "gcm == null");
-	                    gcm = GoogleCloudMessaging.getInstance(context);
-	                }
-	                Log.e(TAG, "gcm.register(SENDER_ID)");
-	                regid = gcm.register(SENDER_ID);
-	                Log.e(TAG, regid);
-	                msg = "Dvice registered, registration ID=" + regid;
-	                Log.d(TAG, msg);
-	                //sendRegistrationIdToBackend(regid);
-	                storeRegistrationId(context, regid);
-	            } catch (Exception ex) {
-	                msg = "Error :" + ex.getMessage();
-	                Log.e(TAG, msg);
-	            }
-	        } else {
-	            Log.e(TAG, "Notification Token : " + regid);
-	            //user.setNotificationToken(regid);
-	        }
+		if(checkPlayServices()){
+			//Now we will get instance from GoogleCloudMessaging and assign it to gcm.
+			gcm = GoogleCloudMessaging.getInstance(this);
+			regid = getRegistrationId(context);
+			mDisplay.setText(regid);
+			if(regid.isEmpty()){
+				new RegisterBackground().execute();
+			}
 		}
 	}
 	
@@ -165,37 +140,31 @@ public class MainActivity extends Activity {
 	            Context.MODE_PRIVATE);
 	}
     
-	private boolean isPlayServicesAvaliable() {
-		int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(getBaseContext());
-		if (ConnectionResult.SUCCESS == resultCode) {
-			Log.d(TAG,"Google Play services is available.");
-			return true;
-		}else{
-			if (ConnectionResult.SERVICE_MISSING == resultCode ||
-				ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED == resultCode ||
-				ConnectionResult.SERVICE_DISABLED == resultCode||
-				ConnectionResult.SERVICE_INVALID == resultCode) {
-				Dialog errorDialog = GooglePlayServicesUtil.getErrorDialog(
-						resultCode ,
-	                    this,
-	                    CONNECTION_FAILURE_RESOLUTION_REQUEST);
-				errorDialog.show();
-			}
-
-			return false;
-		}
+	private boolean checkPlayServices() {
+	    int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+	    if (resultCode != ConnectionResult.SUCCESS) {
+	        if (GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+	            GooglePlayServicesUtil.getErrorDialog(resultCode, this,
+	            		CONNECTION_FAILURE_RESOLUTION_REQUEST).show();
+	        } else {
+	            Log.i(TAG, "This device is not supported.");
+	            finish();
+	        }
+	        return false;
+	    }
+	    return true;
 	}
-
+	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
-
 	@Override
 	protected void onResume(){
 		super.onResume();
+		checkPlayServices();
 	}
 	
 	class RegisterBackground extends AsyncTask<String,String,String>{
@@ -205,21 +174,18 @@ public class MainActivity extends Activity {
 			//“doInBackground” is the method which will be having the main code.
 			String msg = "";
 			try {
-				Log.e(TAG, "doInBackground");
                 if (gcm == null) {
-                	Log.e(TAG, "gcm == null");
                     gcm = GoogleCloudMessaging.getInstance(context);
                 }
-                Log.e(TAG, "gcm.register(SENDER_ID)");
                 regid = gcm.register(SENDER_ID);
-                Log.e(TAG, regid);
                 msg = "Dvice registered, registration ID=" + regid;
                 Log.d(TAG, msg);
-                sendRegistrationIdToBackend(regid);
-                storeRegistrationId(context, regid);
+                sendRegistrationIdToBackend();
+                
+                // Persist the regID - no need to register again.
+               storeRegistrationId(context, regid);
             } catch (IOException ex) {
                 msg = "Error :" + ex.getMessage();
-                Log.e(TAG, msg);
             }
             return msg;
         }
@@ -232,21 +198,23 @@ public class MainActivity extends Activity {
 
         }
 		
-		private void sendRegistrationIdToBackend(String regid) {
+		private void sendRegistrationIdToBackend() {
             // this code will send registration id of a device to our own server.
-			String url = "http://www.yourwebsitename.com/getregistrationid.php";
+		    // Your implementation here.
+
+			String url = "http://www.yourwebsite.in/getdevice.php";
 			List<NameValuePair> params = new ArrayList<NameValuePair>();
-            params.add(new BasicNameValuePair("regid", regid));
-           DefaultHttpClient httpClient = new DefaultHttpClient();
-            HttpPost httpPost = new HttpPost(url);
-            try {
+	        params.add(new BasicNameValuePair("regid", regid));
+	        DefaultHttpClient httpClient = new DefaultHttpClient();
+	        HttpPost httpPost = new HttpPost(url);
+	        try {
 				httpPost.setEntity(new UrlEncodedFormEntity(params));
 			} catch (UnsupportedEncodingException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 
-            try {
+	        try {
 				HttpResponse httpResponse = httpClient.execute(httpPost);
 			} catch (ClientProtocolException e) {
 				// TODO Auto-generated catch block
@@ -254,7 +222,7 @@ public class MainActivity extends Activity {
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}   
+			} 
 		}
 	}
 }

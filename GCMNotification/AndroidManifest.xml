@@ -5,17 +5,25 @@
     android:versionName="1.0" >
     
     <uses-sdk
-        android:minSdkVersion="12"
-        android:targetSdkVersion="17" />
+        android:minSdkVersion="9"
+        android:targetSdkVersion="19" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+    
+    <permission
+        android:name="com.demo.gcmnotification.permission.C2D_MESSAGE"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.demo.gcmnotification.permission.C2D_MESSAGE" />
+    
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
             
         <activity
             android:name="com.demo.gcmnotification.MainActivity"
@@ -25,6 +33,33 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <receiver
+            android:name="com.demo.gcmnotification.GcmBroadcastReceiver"
+            android:permission="com.google.android.c2dm.permission.SEND" >
+            <intent-filter>
+
+                <!-- Receives the actual messages. -->
+                <action android:name="com.google.android.c2dm.intent.RECEIVE" />
+
+                <category android:name="com.demo.gcmnotification" />
+            </intent-filter>
+        </receiver>
+        
+        <service android:name="com.demo.gcmnotification.GcmIntentService" />
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+        
+        <activity
+            android:name="com.demo.gcmnotification.ReceiveActivity"
+            android:label="@string/title_activity_receive" >
+        </activity>
+        <activity
+            android:name="com.demo.gcmnotification.MaiActivity"
+            android:label="@string/title_activity_mai" >
         </activity>
     </application>
 
